@@ -2,6 +2,8 @@ import pandas as pd
 from sqlalchemy import create_engine
 import logging
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -14,17 +16,20 @@ logging.basicConfig(
 def load_to_postgresql():
     logging.info("--- Starting Database Loading Process ---")
 
-    # 1. Define connection to PostgreSQL
-    # Format: postgresql://username:password@host:port/database_name
-    # TODO: Change 'TU_CONTRASEÑA_AQUI' to your real pgAdmin password
-    db_url = 'postgresql://postgres:123rtyu7io@localhost:5432/andina_foods_db'
+    db_password = os.getenv('DB_PASSWORD')
+    if not db_password:
+        logging.error("DB_PASSWORD not found in environment variables.")
+        return
+
+    # Define connection to PostgreSQL
+    db_url = f'postgresql://postgres:{db_password}@localhost:5432/andina_foods_db'
     engine = create_engine(db_url)
 
-    # 2. Define file paths
+    # Define file paths
     clean_sales_path = PROJECT_ROOT / 'data' / 'processed' / 'clean_sales.csv'
     clean_production_path = PROJECT_ROOT / 'data' / 'processed' / 'clean_production.csv'
 
-    # 3. Load processed CSVs into DataFrames
+    # Load processed CSVs into DataFrames
     try:
         df_sales = pd.read_csv(clean_sales_path)
         df_production = pd.read_csv(clean_production_path)
