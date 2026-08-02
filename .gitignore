@@ -1,0 +1,17 @@
+# Virtual Environment
+.venv/
+env/
+__pycache__/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Data
+data/raw/*
+data/interim/*
+data/processed/*
+!data/**/.gitkeep
