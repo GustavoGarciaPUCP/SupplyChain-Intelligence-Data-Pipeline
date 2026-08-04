@@ -32,7 +32,7 @@ def generate_business_alerts():
     alerts_list = []
 
     try:
-        #Quality Control Alert (Defect rate>5%)
+        # Evaluate Quality Control rules (Defect rate > 5%)
         logging.info("Evaluating Quality Control rules...")
         query_defects = "SELECT * FROM vw_plant_performance"
         df_plants = pd.read_sql(query_defects, engine)
@@ -47,15 +47,19 @@ def generate_business_alerts():
                 'priority': 'HIGH'
             })
 
-        #Save alerts to CSV for Power BI
-        alerts_df = pd.DataFrame(alerts_list)
+        # Define expected columns for Power BI schema stability
+        columns = ['alert_date', 'alert_type', 'description', 'priority']
+        alerts_df = pd.DataFrame(alerts_list, columns=columns)
+
         alerts_path = PROJECT_ROOT / 'data' / 'processed' / 'business_alerts.csv'
 
+        # Always save to CSV, even if empty, to prevent Power BI refresh errors
+        alerts_df.to_csv(alerts_path, index=False)
+
         if not alerts_df.empty:
-            alerts_df.to_csv(alerts_path, index=False)
             logging.info(f"Generated {len(alerts_df)} alerts and saved to {alerts_path}")
         else:
-            logging.info("No anomalies detected. Zero alerts generated.")
+            logging.info("No anomalies detected. Empty alerts file generated for Power BI.")
 
     except Exception as e:
         logging.error(f"Failed to generate alerts. Error: {e}")
