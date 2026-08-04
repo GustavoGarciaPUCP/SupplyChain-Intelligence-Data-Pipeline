@@ -7,15 +7,9 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-
-# Load environment variables
 load_dotenv(PROJECT_ROOT / '.env')
 
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def generate_business_alerts():
     logging.info("--- Starting Alert Engine ---")
@@ -25,35 +19,53 @@ def generate_business_alerts():
         logging.error("DB_PASSWORD not found in environment variables.")
         return
 
-    #Connect to Database
     db_url = f'postgresql://postgres:{db_password}@localhost:5432/andina_foods_db'
     engine = create_engine(db_url)
 
     alerts_list = []
 
     try:
-        # Evaluate Quality Control rules (Defect rate > 5%)
-        logging.info("Evaluating Quality Control rules...")
-        query_defects = "SELECT * FROM vw_plant_performance"
-        df_plants = pd.read_sql(query_defects, engine)
+        logging.info("Fetching data from analytical views...")
+        df_sales = pd.read_sql("SELECT * FROM vw_monthly_sales_ranking", engine)
+        df_production = pd.read_sql("SELECT * FROM vw_plant_performance", engine)
 
-        high_defects = df_plants[df_plants['defect_rate_percentage'] > 5.0]
+        # Merge on month and product_id
+        df_merged = pd.merge(
+            df_production,
+            df_sales,
+            left_on=['production_month', 'product_id'],
+            right_on=['sales_month', 'product_id'],
+            how='inner',
+            suffixes=('_prod', '_sales')
+        )
 
-        for index, row in high_defects.iterrows():
-            alerts_list.append({
-                'alert_date': datetime.now().strftime("%Y-%m-%d"),
-                'alert_type': 'ALERTA_CALIDAD',
-                'description': f"High defect rate in {row['plant_location']} ({row['defect_rate_percentage']}%).",
-                'priority': 'HIGH'
-            })
+        logging.info("Evaluating business rules...")
+        for index, row in df_merged.iterrows():
+            defect_rate = row['defect_rate_percentage']
+            revenue = row['total_revenue']
+            plant = row['plant_location']
+            product_name = row['product_name_prod']
+            month_str = row['production_month'].strftime('%Y-%m')
 
-        # Define expected columns for Power BI schema stability
+            if defect_rate > 5.0:
+                alerts_list.append({
+                    'alert_date': datetime.now().strftime("%Y-%m-%d"),
+                    'alert_type': 'HIGH_DEFECT_RATE',
+                    'description': f"High defect rate in {plant} for {product_name} ({defect_rate}%) in {month_str}.",
+                    'priority': 'HIGH'
+                })
+            elif defect_rate > 3.0 and revenue > 5000:
+                alerts_list.append({
+                    'alert_date': datetime.now().strftime("%Y-%m-%d"),
+                    'alert_type': 'REVENUE_AT_RISK',
+                    'description': f"Elevated defect rate ({defect_rate}%) in {plant} for high-revenue product {product_name} in {month_str}.",
+                    'priority': 'CRITICAL'
+                })
+
         columns = ['alert_date', 'alert_type', 'description', 'priority']
         alerts_df = pd.DataFrame(alerts_list, columns=columns)
 
         alerts_path = PROJECT_ROOT / 'data' / 'processed' / 'business_alerts.csv'
-
-        # Always save to CSV, even if empty, to prevent Power BI refresh errors
         alerts_df.to_csv(alerts_path, index=False)
 
         if not alerts_df.empty:
@@ -63,7 +75,6 @@ def generate_business_alerts():
 
     except Exception as e:
         logging.error(f"Failed to generate alerts. Error: {e}")
-
 
 if __name__ == "__main__":
     generate_business_alerts()
