@@ -22,6 +22,14 @@ The project is built on a 3-tier architecture:
    - Connects directly to the PostgreSQL database.
    - Utilizes relational cross-filtering (via the `products` bridge table) to allow dynamic, synchronized filtering of both revenue and production defects without DAX workarounds.
 
+## Power BI Dashboard
+
+![Supply Chain Dashboard Preview](images/dashboard_preview.png)
+
+You can download the full interactive model in the [Power BI folder](./powerbi/SupplyChain_Dashboard.pbix).
+
+You can also view the static exported report in PDF format [here](./docs/reporte_ejecutivo.pdf).
+
 ##  How to Run the Project
 
 1. **Prerequisites:**
