@@ -49,14 +49,14 @@ def generate_business_alerts():
 
             if defect_rate > 5.0:
                 alerts_list.append({
-                    'alert_date': datetime.now().strftime("%Y-%m-%d"),
+                    'alert_date': row['production_month'].strftime("%Y-%m-%d"),
                     'alert_type': 'HIGH_DEFECT_RATE',
                     'description': f"High defect rate in {plant} for {product_name} ({defect_rate}%) in {month_str}.",
                     'priority': 'HIGH'
                 })
             elif defect_rate > 3.0 and revenue > 5000:
                 alerts_list.append({
-                    'alert_date': datetime.now().strftime("%Y-%m-%d"),
+                    'alert_date': row['production_month'].strftime("%Y-%m-%d"),
                     'alert_type': 'REVENUE_AT_RISK',
                     'description': f"Elevated defect rate ({defect_rate}%) in {plant} for high-revenue product {product_name} in {month_str}.",
                     'priority': 'CRITICAL'
