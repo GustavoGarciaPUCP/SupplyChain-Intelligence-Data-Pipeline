@@ -35,23 +35,31 @@ def load_to_postgresql():
     logging.info("Schema updated.")
 
     # 2. Load Data
-    clean_products_path = PROJECT_ROOT / 'data' / 'processed' / 'clean_products.csv'
-    clean_sales_path = PROJECT_ROOT / 'data' / 'processed' / 'clean_sales.csv'
-    clean_production_path = PROJECT_ROOT / 'data' / 'processed' / 'clean_production.csv'
+    processed_dir = PROJECT_ROOT / 'data' / 'processed'
 
     try:
-        df_products = pd.read_csv(clean_products_path)
-        df_sales = pd.read_csv(clean_sales_path)
-        df_production = pd.read_csv(clean_production_path)
+        df_products = pd.read_csv(processed_dir / 'clean_products.csv')
+        df_plants = pd.read_csv(processed_dir / 'clean_plants.csv')
+        df_clients = pd.read_csv(processed_dir / 'clean_clients.csv')
+        df_sales = pd.read_csv(processed_dir / 'clean_sales.csv')
+        df_production = pd.read_csv(processed_dir / 'clean_production.csv')
         logging.info("Successfully loaded clean data from disk.")
     except FileNotFoundError as e:
         logging.error(f"Could not find processed files. Did you run clean_data.py? Error: {e}")
         return
 
     try:
+        # Load dimensions first
+        df_plants.to_sql(name='plants', con=engine, if_exists='append', index=False)
+        logging.info(f"Loaded {len(df_plants)} rows into 'plants' table.")
+        
+        df_clients.to_sql(name='clients', con=engine, if_exists='append', index=False)
+        logging.info(f"Loaded {len(df_clients)} rows into 'clients' table.")
+        
         df_products.to_sql(name='products', con=engine, if_exists='append', index=False)
         logging.info(f"Loaded {len(df_products)} rows into 'products' table.")
 
+        # Load facts
         df_sales.to_sql(name='sales', con=engine, if_exists='append', index=False)
         logging.info(f"Loaded {len(df_sales)} rows into 'sales' table.")
 

@@ -29,14 +29,16 @@ def generate_business_alerts():
         df_sales = pd.read_sql("SELECT * FROM vw_monthly_sales_ranking", engine)
         df_production = pd.read_sql("SELECT * FROM vw_plant_performance", engine)
 
-        # Merge on month and product_id
+        # Aggregate sales by month, product, and plant to avoid duplicates from multiple clients
+        df_sales_agg = df_sales.groupby(['sales_month', 'product_id', 'plant_id'], as_index=False)['total_revenue'].sum()
+
+        # Merge on month, product_id, and plant_id
         df_merged = pd.merge(
             df_production,
-            df_sales,
-            left_on=['production_month', 'product_id'],
-            right_on=['sales_month', 'product_id'],
-            how='inner',
-            suffixes=('_prod', '_sales')
+            df_sales_agg,
+            left_on=['production_month', 'product_id', 'plant_id'],
+            right_on=['sales_month', 'product_id', 'plant_id'],
+            how='inner'
         )
 
         logging.info("Evaluating business rules...")
@@ -44,7 +46,7 @@ def generate_business_alerts():
             defect_rate = row['defect_rate_percentage']
             revenue = row['total_revenue']
             plant = row['plant_location']
-            product_name = row['product_name_prod']
+            product_name = row['product_name']
             month_str = row['production_month'].strftime('%Y-%m')
 
             if defect_rate > 5.0:

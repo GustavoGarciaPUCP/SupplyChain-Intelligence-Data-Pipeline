@@ -16,10 +16,10 @@ logging.basicConfig(
     ]
 )
 
-def clean_products_data(input_path, output_path):
-    logging.info("--- Starting Products Data Cleaning ---")
+def clean_dimension_data(input_path, output_path, dimension_name):
+    logging.info(f"--- Starting {dimension_name} Data Cleaning ---")
     shutil.copy2(input_path, output_path)
-    logging.info(f"Products data copied to {output_path}")
+    logging.info(f"{dimension_name} data copied to {output_path}")
 
 def clean_sales_data(input_path, output_path):
     logging.info("--- Starting Sales Data Cleaning ---")
@@ -46,13 +46,14 @@ def clean_production_data(input_path, output_path):
     logging.info("--- Starting Production Data Cleaning ---")
     df = pd.read_excel(input_path)
 
-    df['plant_location'] = df['plant_location'].str.strip().str.title()
+    # df['plant_location'] removed, now we have plant_id which doesn't need strip/title
+    # df['plant_location'] = df['plant_location'].str.strip().str.title()
 
     df['manufactured_qty'] = pd.to_numeric(df['manufactured_qty'], errors='coerce')
     missing_qty = df['manufactured_qty'].isna().sum()
 
     df['manufactured_qty'] = df['manufactured_qty'].fillna(
-        df.groupby('plant_location')['manufactured_qty'].transform('median')
+        df.groupby('plant_id')['manufactured_qty'].transform('median')
     )
     logging.info(f"Imputed {missing_qty} 'ERROR' or missing values using plant median.")
 
@@ -66,17 +67,13 @@ if __name__ == "__main__":
     processed_dir = PROJECT_ROOT / 'data' / 'processed'
     os.makedirs(processed_dir, exist_ok=True)
 
-    raw_products = PROJECT_ROOT / 'data' / 'raw' / 'products.csv'
-    clean_products = processed_dir / 'clean_products.csv'
+    raw_dir = PROJECT_ROOT / 'data' / 'raw'
+    
+    clean_dimension_data(raw_dir / 'products.csv', processed_dir / 'clean_products.csv', "Products")
+    clean_dimension_data(raw_dir / 'plants.csv', processed_dir / 'clean_plants.csv', "Plants")
+    clean_dimension_data(raw_dir / 'clients.csv', processed_dir / 'clean_clients.csv', "Clients")
 
-    raw_sales = PROJECT_ROOT / 'data' / 'raw' / 'sales_data.csv'
-    clean_sales = processed_dir / 'clean_sales.csv'
+    clean_sales_data(raw_dir / 'sales_data.csv', processed_dir / 'clean_sales.csv')
+    clean_production_data(raw_dir / 'production_data.xlsx', processed_dir / 'clean_production.csv')
 
-    raw_prod = PROJECT_ROOT / 'data' / 'raw' / 'production_data.xlsx'
-    clean_prod = processed_dir / 'clean_production.csv'
-
-    clean_products_data(raw_products, clean_products)
-    clean_sales_data(raw_sales, clean_sales)
-    clean_production_data(raw_prod, clean_prod)
-
-    logging.info("Day 2 Pipeline completed successfully.")
+    logging.info("Data Cleaning Pipeline completed successfully.")

@@ -7,16 +7,26 @@ WITH monthly_sales AS (
         DATE_TRUNC('month', s.order_date)::DATE AS sales_month,
         p.product_id,
         p.product_name,
+        pl.plant_id,
+        pl.plant_location,
+        c.client_id,
+        c.client_name,
         SUM(s.quantity * s.unit_price) AS total_revenue,
         SUM(s.quantity) AS total_units_sold
     FROM sales s
     JOIN products p ON s.product_id = p.product_id
-    GROUP BY DATE_TRUNC('month', s.order_date), p.product_id, p.product_name
+    JOIN plants pl ON s.plant_id = pl.plant_id
+    JOIN clients c ON s.client_id = c.client_id
+    GROUP BY DATE_TRUNC('month', s.order_date), p.product_id, p.product_name, pl.plant_id, pl.plant_location, c.client_id, c.client_name
 )
 SELECT
     sales_month,
     product_id,
     product_name,
+    plant_id,
+    plant_location,
+    client_id,
+    client_name,
     total_revenue,
     total_units_sold,
     RANK() OVER (PARTITION BY sales_month ORDER BY total_revenue DESC) AS revenue_rank
@@ -28,10 +38,12 @@ SELECT
     DATE_TRUNC('month', pr.production_date)::DATE AS production_month,
     p.product_id,
     p.product_name,
-    pr.plant_location,
+    pl.plant_id,
+    pl.plant_location,
     SUM(pr.manufactured_qty) AS total_manufactured,
     SUM(pr.defect_qty) AS total_defects,
     ROUND((SUM(pr.defect_qty)::DECIMAL / NULLIF(SUM(pr.manufactured_qty), 0)) * 100, 2) AS defect_rate_percentage
 FROM production pr
 JOIN products p ON pr.product_id = p.product_id
-GROUP BY DATE_TRUNC('month', pr.production_date), p.product_id, p.product_name, pr.plant_location;
+JOIN plants pl ON pr.plant_id = pl.plant_id
+GROUP BY DATE_TRUNC('month', pr.production_date), p.product_id, p.product_name, pl.plant_id, pl.plant_location;
